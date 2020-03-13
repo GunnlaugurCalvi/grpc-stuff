@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package calculator;
-option go_package="calcpb";
+option go_package = "calcpb";
 
 message SumNumbers {
     int64 num_1 = 1;
@@ -16,6 +16,18 @@ message SumResponse {
     int64 result = 1;
 }
 
-service SumService {
+message PrimeRequest {
+    int64 num = 1;
+}
+
+message PrimeResponse {
+    int64 result = 1;
+}
+
+service CalcService {
+    // Unary
     rpc Sum(SumRequest) returns (SumResponse){};
+
+    // Server Streaming
+    rpc PrimeDecomposition(PrimeRequest) returns (stream PrimeResponse){};
 }
