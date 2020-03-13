@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -10,7 +11,20 @@ import (
 	"google.golang.org/grpc"
 )
 
-type server struct{}
+type Server struct{}
+
+func (s *Server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
+	fmt.Printf("Greet invoked with %v\n", req)
+	firstName := req.GetGreeting().GetFirstName()
+	lastName := req.GetGreeting().GetLastName()
+	result := fmt.Sprintf("Hello %s %s", firstName, lastName)
+
+	res := &greetpb.GreetResponse{
+		Result: result,
+	}
+
+	return res, nil
+}
 
 func main() {
 	fmt.Println("wassssa")
@@ -23,7 +37,7 @@ func main() {
 
 	s := grpc.NewServer()
 
-	greetpb.RegisterGreetServiceServer(s, &server{})
+	greetpb.RegisterGreetServiceServer(s, &Server{})
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve : %v", err)
