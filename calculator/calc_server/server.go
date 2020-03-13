@@ -33,8 +33,7 @@ func (s *Server) Sum(ctx context.Context, req *calcpb.SumRequest) (*calcpb.SumRe
 func (s *Server) PrimeDecomposition(req *calcpb.PrimeRequest, stream calcpb.CalcService_PrimeDecompositionServer) error {
 	fmt.Println("Prime Decomposition")
 	num := req.GetNum()
-	var k int64
-	k = 2
+	k := int64(2)
 
 	for num > 1 {
 		if num%k == 0 {
@@ -43,9 +42,9 @@ func (s *Server) PrimeDecomposition(req *calcpb.PrimeRequest, stream calcpb.Calc
 			}
 			stream.Send(res)
 			time.Sleep(1000 * time.Millisecond)
-			num = num / k
+			num /= k
 		} else {
-			k = k + 1
+			k++
 		}
 	}
 
