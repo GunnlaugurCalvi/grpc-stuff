@@ -21,17 +21,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to dial, %v", err)
 	}
+	reader := bufio.NewReader(os.Stdin)
 
 	defer cc.Close()
-
-	// n1, n2 := ValidateInput()
 	c := calcpb.NewCalcServiceClient(cc)
-	// doUnary(c, n1, n2)
-
-	// number := PrimeNumberInput()
-	// doServerStreaming(c, number)
-
-	doClientStreaming(c)
+	fmt.Println("choose API structure demo \n Choose: \n 1) for Unary \n 2) for Server Streaming \n 3) for Client Streaming")
+	option, err := reader.ReadString('\n')
+	option = strings.Replace(option, "\n", "", -1)
+	if err != nil {
+		log.Fatalf("error getting input from user, %v", err)
+	}
+	switch option {
+	case "1":
+		n1, n2 := ValidateInput()
+		doUnary(c, n1, n2)
+	case "2":
+		number := PrimeNumberInput()
+		doServerStreaming(c, number)
+	case "3":
+		doClientStreaming(c)
+	default:
+		fmt.Println("Incorrect option")
+	}
 }
 
 func readInput(API_Structure string) string {
@@ -39,10 +50,13 @@ func readInput(API_Structure string) string {
 
 	switch API_Structure {
 	case "unary":
+		fmt.Println("Unary API RPC...")
 		fmt.Println("Enter two numbers with seperated by whitespace: ")
 	case "serverstream":
+		fmt.Println("Server Streaming RPC..\nPerforming prime decomposition")
 		fmt.Println("Enter a primenumber: ")
 	case "clientstream":
+		fmt.Println("Client Stream RPC...")
 		fmt.Println("Enter as many numbers you want seperated by comma: ")
 	default:
 		fmt.Println("weird error")
@@ -78,7 +92,6 @@ func PrimeNumberInput() int64 {
 }
 
 func doUnary(c calcpb.CalcServiceClient, n1, n2 int64) {
-	fmt.Println("client said hi")
 	req := &calcpb.SumRequest{
 		SumResult: &calcpb.SumNumbers{
 			Num_1: n1,
@@ -95,7 +108,6 @@ func doUnary(c calcpb.CalcServiceClient, n1, n2 int64) {
 }
 
 func doServerStreaming(c calcpb.CalcServiceClient, number int64) {
-	fmt.Println("Performing prime decomposition")
 	req := &calcpb.PrimeRequest{
 		Num: number,
 	}
@@ -115,14 +127,12 @@ func doServerStreaming(c calcpb.CalcServiceClient, number int64) {
 		if err != nil {
 			log.Fatalf("failed due to unexpected events %v", err)
 		}
-
 		fmt.Printf("number => %d\n", primeResponse.GetResult())
 	}
+	fmt.Println("Multiplied together gives you", number)
 }
 
 func doClientStreaming(c calcpb.CalcServiceClient) {
-	fmt.Println("Client Stream RPC...")
-
 	numberString := readInput("clientstream")
 
 	numberString = strings.Replace(numberString, "\n", "", -1)
@@ -143,7 +153,7 @@ func doClientStreaming(c calcpb.CalcServiceClient) {
 		if err != nil {
 			log.Fatalf("unable to parse string to int64, %v", err)
 		}
-		fmt.Printf("sending out %v, %T\n", parseToInt, parseToInt)
+		fmt.Printf("sending out %v\n", parseToInt)
 
 		stream.Send(&calcpb.ComputeAvgRequest{
 			Number: parseToInt,
