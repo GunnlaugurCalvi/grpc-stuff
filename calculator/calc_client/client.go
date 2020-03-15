@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gunnlaugurcalvi/grpc-stuff/calculator/calcpb"
 	"google.golang.org/grpc"
@@ -26,16 +27,25 @@ func main() {
 	// n1, n2 := ValidateInput()
 	c := calcpb.NewCalcServiceClient(cc)
 	// doUnary(c, n1, n2)
-	number := PrimeNumberInput()
-	doServerStreaming(c, number)
+
+	// number := PrimeNumberInput()
+	// doServerStreaming(c, number)
+
+	doClientStreaming(c)
 }
 
 func readInput(API_Structure string) string {
 	reader := bufio.NewReader(os.Stdin)
-	if API_Structure == "unary" {
+
+	switch API_Structure {
+	case "unary":
 		fmt.Println("Enter two numbers with seperated by whitespace: ")
-	} else {
+	case "serverstream":
 		fmt.Println("Enter a primenumber: ")
+	case "clientstream":
+		fmt.Println("Enter as many numbers you want seperated by comma: ")
+	default:
+		fmt.Println("weird error")
 	}
 
 	numbersString, err := reader.ReadString('\n')
@@ -57,7 +67,7 @@ func ValidateInput() (int64, int64) {
 }
 
 func PrimeNumberInput() int64 {
-	n := strings.Replace(readInput("stream"), "\n", "", -1)
+	n := strings.Replace(readInput("serverstream"), "\n", "", -1)
 
 	pnumber, err := strconv.ParseInt(n, 0, 64)
 	if err != nil {
@@ -108,4 +118,44 @@ func doServerStreaming(c calcpb.CalcServiceClient, number int64) {
 
 		fmt.Printf("number => %d\n", primeResponse.GetResult())
 	}
+}
+
+func doClientStreaming(c calcpb.CalcServiceClient) {
+	fmt.Println("Client Stream RPC...")
+
+	numberString := readInput("clientstream")
+
+	numberString = strings.Replace(numberString, "\n", "", -1)
+	numberList := strings.Split(numberString, " ")
+
+	fmt.Println("list of numbers", numberList, len(numberList))
+
+	stream, err := c.ComputeAverage(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to compute average: %v", err)
+	}
+
+	for _, n := range numberList {
+		if n == " " || n == "" {
+			continue
+		}
+		parseToInt, err := strconv.ParseInt(n, 0, 64)
+		if err != nil {
+			log.Fatalf("unable to parse string to int64, %v", err)
+		}
+		fmt.Printf("sending out %v, %T\n", parseToInt, parseToInt)
+
+		stream.Send(&calcpb.ComputeAvgRequest{
+			Number: parseToInt,
+		})
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	resp, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("Error closing stream, %v", err)
+	}
+
+	fmt.Printf("Server response %v", resp.GetAvgResult())
 }

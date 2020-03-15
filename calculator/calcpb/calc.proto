@@ -24,10 +24,21 @@ message PrimeResponse {
     int64 result = 1;
 }
 
+message ComputeAvgRequest {
+    int64 number = 1;
+}
+
+message ComputeAvgResponse {
+    double avgResult = 1;
+}
+
 service CalcService {
     // Unary
     rpc Sum(SumRequest) returns (SumResponse){};
 
     // Server Streaming
     rpc PrimeDecomposition(PrimeRequest) returns (stream PrimeResponse){};
+
+    // Client Streaming
+    rpc ComputeAverage(stream ComputeAvgRequest) returns (ComputeAvgResponse){};
 }

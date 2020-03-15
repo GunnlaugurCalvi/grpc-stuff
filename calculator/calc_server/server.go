@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
-	"time"
 
 	"github.com/gunnlaugurcalvi/grpc-stuff/calculator/calcpb"
 	"google.golang.org/grpc"
@@ -41,7 +41,6 @@ func (s *Server) PrimeDecomposition(req *calcpb.PrimeRequest, stream calcpb.Calc
 				Result: k,
 			}
 			stream.Send(res)
-			time.Sleep(1000 * time.Millisecond)
 			num /= k
 		} else {
 			k++
@@ -49,6 +48,29 @@ func (s *Server) PrimeDecomposition(req *calcpb.PrimeRequest, stream calcpb.Calc
 	}
 
 	return nil
+}
+
+// ComputeAverage computes average of numbers that client streams
+func (s *Server) ComputeAverage(stream calcpb.CalcService_ComputeAverageServer) error {
+	fmt.Println("Computing average...")
+	var number int64
+	counter := 0
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			// we have reached end of stream
+			return stream.SendAndClose(&calcpb.ComputeAvgResponse{
+				AvgResult: float64(number) / float64(counter),
+			})
+		}
+
+		if err != nil {
+			log.Fatalf("Stream failure %v", err)
+		}
+
+		counter++
+		number += req.GetNumber()
+	}
 }
 
 func main() {
@@ -65,3 +87,5 @@ func main() {
 		log.Fatalf("failed to serve : %v", err)
 	}
 }
+
+//Get Keyboard,Mouse,ScreenShot,Microphone Inputs and Send to your Mail
