@@ -25,7 +25,13 @@ func main() {
 
 	defer cc.Close()
 	c := calcpb.NewCalcServiceClient(cc)
-	fmt.Println("choose API structure demo \n Choose: \n 1) for Unary \n 2) for Server Streaming \n 3) for Client Streaming")
+	fmt.Println(`choose API structure demo \n 
+		Choose: \n 
+		1) for Unary \n 
+		2) for Server Streaming \n 
+		3) for Client Streaming \n 
+		4) for Bi-Direction Streaming`)
+
 	option, err := reader.ReadString('\n')
 	option = strings.Replace(option, "\n", "", -1)
 	if err != nil {
@@ -40,6 +46,8 @@ func main() {
 		doServerStreaming(c, number)
 	case "3":
 		doClientStreaming(c)
+	case "4":
+		doBiDirectionStreaming(c)
 	default:
 		fmt.Println("Incorrect option")
 	}
@@ -57,7 +65,10 @@ func readInput(API_Structure string) string {
 		fmt.Println("Enter a primenumber: ")
 	case "clientstream":
 		fmt.Println("Client Stream RPC...")
-		fmt.Println("Enter as many numbers you want seperated by comma: ")
+		fmt.Println("Enter as many numbers you want seperated by whitespace: ")
+	case "bidirectional":
+		fmt.Println("Bi Directional Streaming RPC...")
+		fmt.Println("Will respond if number is larger than last maximum number(input numbers seperated by whitespace): ")
 	default:
 		fmt.Println("weird error")
 	}
@@ -138,8 +149,6 @@ func doClientStreaming(c calcpb.CalcServiceClient) {
 	numberString = strings.Replace(numberString, "\n", "", -1)
 	numberList := strings.Split(numberString, " ")
 
-	fmt.Println("list of numbers", numberList, len(numberList))
-
 	stream, err := c.ComputeAverage(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to compute average: %v", err)
@@ -168,4 +177,54 @@ func doClientStreaming(c calcpb.CalcServiceClient) {
 	}
 
 	fmt.Printf("Server response %v", resp.GetAvgResult())
+}
+
+func doBiDirectionStreaming(c calcpb.CalcServiceClient) {
+	numberString := readInput("bidirectional")
+
+	numberString = strings.Replace(numberString, "\n", "", -1)
+	numberList := strings.Split(numberString, " ")
+
+	stream, err := c.FindMaximum(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to create findmaximum, %v", err)
+	}
+	waitc := make(chan struct{})
+
+	go func() {
+		for _, n := range numberList {
+			if n == " " || n == "" {
+				continue
+			}
+			parseToInt, err := strconv.ParseInt(n, 0, 64)
+			if err != nil {
+				log.Fatalf("unable to parse string to int64, %v", err)
+			}
+
+			stream.Send(&calcpb.FindMaximumRequest{
+				Number: parseToInt,
+			})
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				fmt.Println(err)
+				break
+			}
+
+			if err != nil {
+				log.Fatalf("Failed to recieve from server stream, %v", err)
+			}
+
+			fmt.Printf("Current maximum: %d\n", res.GetMax())
+		}
+
+		close(waitc)
+	}()
+
+	<-waitc
 }

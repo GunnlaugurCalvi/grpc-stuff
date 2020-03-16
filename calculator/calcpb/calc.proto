@@ -32,13 +32,25 @@ message ComputeAvgResponse {
     double avgResult = 1;
 }
 
+message FindMaximumRequest {
+    int64 number = 1;
+}
+
+message FindMaximumResponse {
+    int64 max = 1;
+}
+
+
 service CalcService {
     // Unary
-    rpc Sum(SumRequest) returns (SumResponse){};
+    rpc Sum(SumRequest) returns (SumResponse) {};
 
     // Server Streaming
-    rpc PrimeDecomposition(PrimeRequest) returns (stream PrimeResponse){};
+    rpc PrimeDecomposition(PrimeRequest) returns (stream PrimeResponse) {};
 
     // Client Streaming
-    rpc ComputeAverage(stream ComputeAvgRequest) returns (ComputeAvgResponse){};
+    rpc ComputeAverage(stream ComputeAvgRequest) returns (ComputeAvgResponse) {};
+
+    // Bi-Directional Streaming
+    rpc FindMaximum(stream FindMaximumRequest) returns (stream FindMaximumResponse) {};
 }

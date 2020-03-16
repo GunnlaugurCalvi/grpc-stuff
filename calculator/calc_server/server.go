@@ -73,6 +73,35 @@ func (s *Server) ComputeAverage(stream calcpb.CalcService_ComputeAverageServer) 
 	}
 }
 
+// FindMaximum sends back to client if current number is bigger than last one
+func (s *Server) FindMaximum(stream calcpb.CalcService_FindMaximumServer) error {
+	fmt.Println("Finding maximum from client stream...")
+	lastNumber := int64(0)
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			log.Fatalf("failed to recieve from client stream, %v", err)
+		}
+
+		currentNumber := req.GetNumber()
+		if currentNumber > lastNumber {
+			err = stream.Send(&calcpb.FindMaximumResponse{
+				Max: currentNumber,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			lastNumber = currentNumber
+		}
+	}
+}
+
 func main() {
 	fmt.Println("init server")
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
