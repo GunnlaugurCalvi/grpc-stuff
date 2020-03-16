@@ -13,6 +13,8 @@ import (
 
 	"github.com/gunnlaugurcalvi/grpc-stuff/calculator/calcpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -30,7 +32,8 @@ func main() {
 		1) for Unary \n 
 		2) for Server Streaming \n 
 		3) for Client Streaming \n 
-		4) for Bi-Direction Streaming`)
+		4) for Bi-Direction Streaming \n
+		5) for Error Unary Test`)
 
 	option, err := reader.ReadString('\n')
 	option = strings.Replace(option, "\n", "", -1)
@@ -48,6 +51,8 @@ func main() {
 		doClientStreaming(c)
 	case "4":
 		doBiDirectionStreaming(c)
+	case "5":
+		doErrorUnary(c)
 	default:
 		fmt.Println("Incorrect option")
 	}
@@ -227,4 +232,31 @@ func doBiDirectionStreaming(c calcpb.CalcServiceClient) {
 	}()
 
 	<-waitc
+}
+
+func doErrorUnary(c calcpb.CalcServiceClient) {
+	fmt.Println("starting to do sqrt unary RPC...")
+	doErrorCall(c, 10)
+	doErrorCall(c, -10)
+}
+
+func doErrorCall(c calcpb.CalcServiceClient, n int32) {
+	resp, err := c.SquareRoot(context.Background(), &calcpb.SquareRootRequest{Number: n})
+
+	if err != nil {
+		respErr, ok := status.FromError(err)
+		if ok {
+			// actual error from gRPC (user error)
+			fmt.Println("err message from server", respErr.Message())
+			fmt.Println("err code from server", respErr.Code())
+			if respErr.Code() == codes.InvalidArgument {
+				fmt.Println("we probably sent a negative number")
+				return
+			}
+		} else {
+			log.Fatalf("Big error calling square root: %v", err)
+		}
+	}
+
+	fmt.Printf("Result of sqrt of %v: %v\n", n, resp.GetNumberRoot())
 }
