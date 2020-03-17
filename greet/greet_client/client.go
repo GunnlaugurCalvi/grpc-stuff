@@ -10,13 +10,24 @@ import (
 	"github.com/gunnlaugurcalvi/grpc-stuff/greet/greetpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
 
 func main() {
 	fmt.Println("im client")
+	tls := true
+	opts := grpc.WithInsecure()
+	if tls {
+		certFile := "ssl/ca.crt" // certificate authority trust cert
+		creds, err := credentials.NewClientTLSFromFile(certFile, "")
+		if err != nil {
+			log.Fatalf("error while loading ca trust cert: %v", err)
+		}
+		opts = grpc.WithTransportCredentials(creds)
+	}
 
-	cc, err := grpc.Dial(":50051", grpc.WithInsecure())
+	cc, err := grpc.Dial("localhost:50051", opts)
 	if err != nil {
 		log.Fatalf("failed to dial, %v", err)
 	}
@@ -25,12 +36,12 @@ func main() {
 	c := greetpb.NewGreetServiceClient(cc)
 	// future implem let client choose API sturcture
 	// switch case
-	// doUnary(c)
+	doUnary(c)
 	// doServerStreaming(c)
 	// doClientStreaming(c)
 	// doBiDiStreaming(c)
-	doUnaryWithDeadline(c, 5*time.Second) //should complete
-	doUnaryWithDeadline(c, 1*time.Second) //should timeout
+	// doUnaryWithDeadline(c, 5*time.Second) //should complete
+	// doUnaryWithDeadline(c, 1*time.Second) //should timeout
 
 }
 
